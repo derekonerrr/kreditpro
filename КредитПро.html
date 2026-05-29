@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>КредитПро — Анализатор кредитных альтернатив</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#0f1f38;--navy2:#1a3050;--navy3:#243f63;
+  --teal:#0d9488;--teal2:#0f766e;--teal3:#ccfbf1;--teal4:#f0fdfa;
+  --gold:#f59e0b;--gold2:#fbbf24;--gold3:#fef3c7;
+  --slate:#475569;--slate2:#64748b;--slate3:#94a3b8;
+  --red:#ef4444;--red2:#fee2e2;
+  --green:#10b981;--green2:#d1fae5;
+  --blue:#2563eb;--blue2:#dbeafe;
+  --bg:#f8fafc;--bg2:#f1f5f9;--border:#e2e8f0;--white:#fff;
+  --r:12px;--r-sm:8px;--r-lg:16px;
+  --sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --sh-md:0 4px 12px rgba(0,0,0,.1);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#1e293b;min-height:100vh;font-size:14px}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]{-moz-appearance:textfield}
+a{color:inherit;text-decoration:none}
+
+/* ── HEADER ── */
+header{background:var(--navy);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.hdr{max-width:1100px;margin:0 auto;padding:0 24px;height:58px;display:flex;align-items:center;gap:14px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:var(--navy);flex-shrink:0}
+.logo-name{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.4px}
+.logo-name span{color:var(--gold)}
+.hdr-nav{display:flex;gap:4px;margin-left:32px}
+.hdr-tab{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:rgba(255,255,255,.55);cursor:pointer;transition:.15s;border:none;background:none}
+.hdr-tab:hover{color:rgba(255,255,255,.85)}
+.hdr-tab.on{background:rgba(255,255,255,.1);color:#fff}
+.hdr-badge{margin-left:auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:5px 14px;font-size:12px;color:rgba(255,255,255,.65);font-weight:600;white-space:nowrap}
+
+/* ── LAYOUT ── */
+main{max-width:1100px;margin:0 auto;padding:24px 24px 60px}
+.page{display:none}.page.on{display:block}
+
+/* ── INPUTS PANEL ── */
+.input-panel{background:var(--white);border-radius:var(--r-lg);padding:24px;box-shadow:var(--sh);margin-bottom:20px;border:1px solid var(--border)}
+.panel-label{font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--slate3);text-transform:uppercase;margin-bottom:16px}
+.inputs-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:end}
+.igrp{display:flex;flex-direction:column;gap:5px}
+.ilabel{font-size:11px;font-weight:700;color:var(--slate);letter-spacing:.4px;text-transform:uppercase}
+.iwrap{position:relative}
+.ifield{width:100%;padding:11px 42px 11px 13px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:16px;font-weight:700;color:var(--navy);font-family:inherit;outline:none;transition:.2s;background:var(--white);appearance:none}
+.ifield:hover{border-color:#cbd5e1}
+.ifield:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.ifield.err{border-color:var(--red)}
+.isuffix{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--slate3);pointer-events:none}
+.ihint{font-size:11px;color:var(--slate3);margin-top:2px}
+.ierr{font-size:11px;color:var(--red);margin-top:2px;display:none}
+.calc-btn{padding:11px 28px;background:var(--teal);color:#fff;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;transition:.2s;white-space:nowrap;height:46px}
+.calc-btn:hover{background:var(--teal2)}
+.calc-btn:active{transform:scale(.97)}
+
+/* ── RESULTS ── */
+#results{display:none}
+
+/* ── BANNER ── */
+.banner{background:var(--navy);border-radius:var(--r-lg);padding:20px 26px;margin-bottom:18px;display:flex;align-items:center;gap:24px;box-shadow:var(--sh-md)}
+.banner-main .bl{font-size:10px;font-weight:700;letter-spacing:.8px;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:4px}
+.banner-main .bv{font-size:34px;font-weight:900;color:var(--gold2);letter-spacing:-1px;line-height:1}
+.banner-main .bs{font-size:12px;color:rgba(255,255,255,.55);margin-top:5px}
+.banner-stats{display:flex;gap:12px;margin-left:auto}
+.bstat{text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:var(--r-sm);padding:10px 16px;min-width:95px}
+.bstat .sv{font-size:18px;font-weight:800;color:#fff;line-height:1}
+.bstat .sl{font-size:10px;color:rgba(255,255,255,.45);margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+
+/* ── CARDS GRID ── */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.card{background:var(--white);border-radius:var(--r-lg);padding:18px 20px;border:1px solid var(--border);box-shadow:var(--sh)}
+.card.winner{border:2px solid var(--teal);position:relative}
+.card-winner-badge{position:absolute;top:-11px;left:18px;background:var(--teal);color:#fff;font-size:10px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:.5px}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.card-type{font-size:11px;font-weight:800;padding:3px 10px;border-radius:5px;letter-spacing:.4px;text-transform:uppercase}
+.ct-ann{background:var(--blue2);color:#1d4ed8}
+.ct-diff{background:var(--teal3);color:var(--teal2)}
+.card-sub{font-size:12px;color:var(--slate3)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.sbox{background:var(--bg);border-radius:var(--r-sm);padding:11px 12px;border:1px solid var(--border)}
+.sbox .sl{font-size:10px;font-weight:700;color:var(--slate3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
+.sbox .sv{font-size:17px;font-weight:800;color:var(--navy)}
+.sv.red{color:var(--red)}.sv.green{color:var(--green)}.sv.blue{color:var(--blue)}
+
+/* ── CHARTS ── */
+.chart-panel{background:var(--white);border-radius:var(--r-lg);padding:20px;border:1px solid var(--border);box-shadow:var(--sh);margin-bottom:18px}
+.chart-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.ctab{padding:6px 14px;border-radius:6px;border:1.5px solid var(--border);background:transparent;font-size:12px;font-weight:700;color:var(--slate);cursor:pointer;transition:.15s;font-family:inherit}
+.ctab:hover{border-color:var(--teal);color:var(--teal)}
+.ctab.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.cpane{display:none}.cpane.on{display:block}
+.chart-wrap{position:relative;height:260px}
+.legend{display:flex;gap:18px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--slate2)}
+.leg-line{width:18px;height:3px;border-radius:2px}
+
+/* ── EARLY ── */
+.early-panel{background:var(--white);border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--sh);margin-bottom:18px;overflow:hidden}
+.early-hdr{padding:16px 20px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;transition:.15s}
+.early-hdr:hover{background:var(--bg)}
+.e-icon{width:34px;height:34px;background:var(--gold3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.e-title{font-size:14px;font-weight:700;color:var(--navy)}
+.e-sub{font-size:11px;color:var(--slate3);margin-top:1px}
+.e-arr{margin-left:auto;font-size:12px;color:var(--slate3);transition:.3s;font-weight:700}
+.e-arr.open{transform:rotate(180deg)}
+.early-body{padding:0 20px 20px;border-top:1px solid var(--bg2)}
+.early-inputs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;margin-bottom:16px}
+.early-res{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.ebox{border-radius:var(--r-sm);padding:13px;text-align:center}
+.ebox.norm{background:var(--bg);border:1px solid var(--border)}
+.ebox.accent{background:var(--teal);color:#fff}
+.eb-v{font-size:18px;font-weight:900;line-height:1.15}
+.eb-l{font-size:10px;font-weight:700;letter-spacing:.4px;margin-top:4px;text-transform:uppercase;opacity:.65}
+.e-placeholder{background:var(--bg);border-radius:var(--r-sm);padding:18px;text-align:center;font-size:13px;color:var(--slate3);border:1px dashed var(--border)}
+
+/* ── TABLE ── */
+.table-panel{background:var(--white);border-radius:var(--r-lg);padding:20px;border:1px solid var(--border);box-shadow:var(--sh)}
+.tbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.ttype-btns{display:flex;gap:6px}
+.ttype-btn{padding:5px 13px;border-radius:6px;border:1.5px solid var(--border);background:transparent;font-size:12px;font-weight:700;color:var(--slate);cursor:pointer;font-family:inherit;transition:.15s}
+.ttype-btn.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.showall-btn{margin-left:auto;padding:5px 14px;border-radius:6px;border:1.5px solid var(--teal);background:transparent;font-size:12px;font-weight:700;color:var(--teal);cursor:pointer;font-family:inherit;transition:.15s}
+.showall-btn:hover{background:var(--teal);color:#fff}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:460px}
+thead th{padding:9px 13px;text-align:right;font-size:10px;font-weight:700;color:var(--slate3);letter-spacing:.5px;text-transform:uppercase;border-bottom:1.5px solid var(--border);background:var(--bg2)}
+thead th:first-child{text-align:center}
+tbody tr{border-bottom:1px solid var(--bg2);transition:.1s}
+tbody tr:hover{background:var(--bg)}
+tbody td{padding:8px 13px;text-align:right}
+tbody td:first-child{text-align:center;font-weight:700;color:var(--slate3)}
+.td-p{color:var(--green);font-weight:700}
+.td-i{color:var(--red);font-weight:700}
+.td-t{color:var(--navy);font-weight:800}
+.td-b{color:var(--slate2)}
+tfoot td{padding:10px 13px;text-align:right;font-weight:800}
+tfoot{background:var(--navy)}
+tfoot td:first-child{text-align:center}
+
+/* ── COMPARE PAGE ── */
+.comp-wrap{background:var(--white);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border);box-shadow:var(--sh)}
+.comp-table{width:100%;border-collapse:collapse;font-size:13px}
+.comp-table th{padding:11px 15px;text-align:center;font-size:10px;font-weight:700;color:var(--slate3);letter-spacing:.5px;text-transform:uppercase;background:var(--bg2);border-bottom:1.5px solid var(--border)}
+.comp-table th:first-child{text-align:left;min-width:200px}
+.comp-table td{padding:10px 15px;text-align:center;border-bottom:1px solid var(--bg2)}
+.comp-table tr:last-child td{border-bottom:none}
+.comp-table .feat{text-align:left;font-weight:600;color:#1e293b}
+.comp-ours{background:#f0fdfa;font-weight:800;color:var(--teal2)}
+.chk{color:var(--green);font-size:15px;font-weight:700}
+.crs{color:var(--red);font-size:15px}
+.cpt{color:var(--gold);font-size:14px}
+.comp-adv{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+.adv-card{background:var(--white);border-radius:var(--r-lg);padding:18px;border:1px solid var(--border);box-shadow:var(--sh)}
+.adv-icon{font-size:26px;margin-bottom:10px}
+.adv-title{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:7px}
+.adv-body{font-size:12px;color:var(--slate2);line-height:1.65}
+
+/* ── RESPONSIVE ── */
+@media(max-width:700px){
+  .inputs-row{grid-template-columns:1fr 1fr;}.calc-btn{grid-column:span 2}
+  .cards{grid-template-columns:1fr}
+  .banner-stats{display:none}
+  .banner-main .bv{font-size:24px}
+  .early-res{grid-template-columns:1fr 1fr}
+  .comp-adv{grid-template-columns:1fr}
+  main{padding:14px 14px 40px}
+}
+@media(max-width:480px){
+  .inputs-row{grid-template-columns:1fr}.calc-btn{grid-column:1}
+  .hdr-badge{display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-icon">₽</div>
+      <div class="logo-name">Кредит<span>Про</span></div>
+    </div>
+    <nav class="hdr-nav">
+      <button class="hdr-tab on" onclick="page('calc',this)">Калькулятор</button>
+      <button class="hdr-tab" onclick="page('compare',this)">Сравнение</button>
+    </nav>
+    <div class="hdr-badge">🏆 Двойной расчёт + досрочное погашение</div>
+  </div>
+</header>
+
+<!-- ══ CALCULATOR ══ -->
+<main>
+<div id="pg-calc" class="page on">
+
+  <div class="input-panel">
+    <div class="panel-label">Параметры кредита</div>
+    <div class="inputs-row">
+
+      <div class="igrp">
+        <label class="ilabel">Сумма кредита</label>
+        <div class="iwrap">
+          <input id="i-amount" class="ifield" type="number" placeholder="1 500 000" min="1000" max="100000000" autocomplete="off"/>
+          <span class="isuffix">₽</span>
+        </div>
+        <div class="ihint">от 1 000 до 100 000 000 ₽</div>
+        <div id="e-amount" class="ierr">Введите корректную сумму</div>
+      </div>
+
+      <div class="igrp">
+        <label class="ilabel">Процентная ставка</label>
+        <div class="iwrap">
+          <input id="i-rate" class="ifield" type="number" placeholder="16" min="0.1" max="100" step="0.1" autocomplete="off"/>
+          <span class="isuffix">%</span>
+        </div>
+        <div class="ihint">годовых, от 0.1% до 100%</div>
+        <div id="e-rate" class="ierr">Введите корректную ставку</div>
+      </div>
+
+      <div class="igrp">
+        <label class="ilabel">Срок кредита</label>
+        <div class="iwrap">
+          <input id="i-months" class="ifield" type="number" placeholder="36" min="1" max="480" step="1" autocomplete="off"/>
+          <span class="isuffix">мес.</span>
+        </div>
+        <div class="ihint">от 1 до 480 месяцев (40 лет)</div>
+        <div id="e-months" class="ierr">Введите корректный срок</div>
+      </div>
+
+      <button class="calc-btn" onclick="run()">Рассчитать →</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <!-- Banner -->
+    <div class="banner">
+      <div class="banner-main">
+        <div class="bl">Экономия — дифференцированный vs аннуитет</div>
+        <div class="bv" id="r-savings">—</div>
+        <div class="bs" id="r-savings-sub"></div>
+      </div>
+      <div class="banner-stats">
+        <div class="bstat"><div class="sv" id="r-bs-amount">—</div><div class="sl">Сумма</div></div>
+        <div class="bstat"><div class="sv" id="r-bs-rate">—</div><div class="sl">Ставка</div></div>
+        <div class="bstat"><div class="sv" id="r-bs-term">—</div><div class="sl">Срок</div></div>
+      </div>
+    </div>
+
+    <!-- Cards -->
+    <div class="cards">
+      <div class="card" id="card-ann">
+        <div class="card-head">
+          <span class="card-type ct-ann">Аннуитет</span>
+          <span class="card-sub">фиксированный платёж</span>
+        </div>
+        <div class="stats">
+          <div class="sbox"><div class="sl">Платёж / мес.</div><div class="sv blue" id="r-ann-pay">—</div></div>
+          <div class="sbox"><div class="sl">Итого выплачено</div><div class="sv" id="r-ann-total">—</div></div>
+          <div class="sbox"><div class="sl">Переплата</div><div class="sv red" id="r-ann-over">—</div></div>
+          <div class="sbox"><div class="sl">% переплаты</div><div class="sv red" id="r-ann-pct">—</div></div>
+        </div>
+      </div>
+      <div class="card winner" id="card-diff">
+        <div class="card-winner-badge" id="winner-badge">✓ ВЫГОДНЕЕ</div>
+        <div class="card-head">
+          <span class="card-type ct-diff">Дифференцированный</span>
+          <span class="card-sub">убывающий платёж</span>
+        </div>
+        <div class="stats">
+          <div class="sbox"><div class="sl">1-й платёж</div><div class="sv blue" id="r-diff-first">—</div></div>
+          <div class="sbox"><div class="sl">Итого выплачено</div><div class="sv" id="r-diff-total">—</div></div>
+          <div class="sbox"><div class="sl">Переплата</div><div class="sv red" id="r-diff-over">—</div></div>
+          <div class="sbox"><div class="sl">Последний платёж</div><div class="sv green" id="r-diff-last">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-panel">
+      <div class="chart-tabs">
+        <button class="ctab on" onclick="swChart('payments',this)">Динамика платежей</button>
+        <button class="ctab" onclick="swChart('structure',this)">Структура аннуитета</button>
+        <button class="ctab" onclick="swChart('balance',this)">Остаток долга</button>
+        <button class="ctab" onclick="swChart('cumint',this)">Накопленная переплата</button>
+      </div>
+      <div id="cp-payments" class="cpane on">
+        <div class="chart-wrap"><canvas id="ch-payments"></canvas></div>
+        <div class="legend">
+          <div class="leg"><div class="leg-line" style="background:#2563eb"></div>Аннуитет</div>
+          <div class="leg"><div class="leg-line" style="background:#0d9488"></div>Дифференцированный</div>
+        </div>
+      </div>
+      <div id="cp-structure" class="cpane">
+        <div class="chart-wrap"><canvas id="ch-structure"></canvas></div>
+        <div class="legend">
+          <div class="leg"><div class="leg-line" style="background:#ef4444"></div>Проценты</div>
+          <div class="leg"><div class="leg-line" style="background:#10b981"></div>Основной долг</div>
+        </div>
+      </div>
+      <div id="cp-balance" class="cpane">
+        <div class="chart-wrap"><canvas id="ch-balance"></canvas></div>
+        <div class="legend">
+          <div class="leg"><div class="leg-line" style="background:#2563eb"></div>Аннуитет</div>
+          <div class="leg"><div class="leg-line" style="background:#0d9488"></div>Дифференцированный</div>
+        </div>
+      </div>
+      <div id="cp-cumint" class="cpane">
+        <div class="chart-wrap"><canvas id="ch-cumint"></canvas></div>
+        <div class="legend">
+          <div class="leg"><div class="leg-line" style="background:#2563eb"></div>Аннуитет</div>
+          <div class="leg"><div class="leg-line" style="background:#0d9488"></div>Дифференцированный</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Early repayment -->
+    <div class="early-panel">
+      <div class="early-hdr" onclick="toggleEarly()">
+        <div class="e-icon">💡</div>
+        <div>
+          <div class="e-title">Калькулятор досрочного погашения</div>
+          <div class="e-sub">Сколько сэкономите при дополнительных платежах</div>
+        </div>
+        <div class="e-arr" id="e-arr">▼</div>
+      </div>
+      <div class="early-body" id="early-body" style="display:none">
+        <div class="early-inputs">
+          <div class="igrp">
+            <label class="ilabel">Доп. платёж каждый месяц</label>
+            <div class="iwrap">
+              <input id="i-extra" class="ifield" type="number" placeholder="5 000" min="0" oninput="runEarly()"/>
+              <span class="isuffix">₽</span>
+            </div>
+            <div class="ihint">Сверх обязательного платежа</div>
+          </div>
+          <div class="igrp">
+            <label class="ilabel">Единовременный платёж</label>
+            <div class="iwrap">
+              <input id="i-lump" class="ifield" type="number" placeholder="100 000" min="0" oninput="runEarly()"/>
+              <span class="isuffix">₽</span>
+            </div>
+            <div class="ihint">Разово, в первый месяц</div>
+          </div>
+        </div>
+        <div id="early-res"></div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-panel">
+      <div class="tbar">
+        <span style="font-size:13px;font-weight:700;color:var(--slate)">График платежей</span>
+        <div class="ttype-btns">
+          <button class="ttype-btn on" onclick="swTable('ann',this)">Аннуитет</button>
+          <button class="ttype-btn" onclick="swTable('diff',this)">Дифференцированный</button>
+        </div>
+        <button class="showall-btn" id="sa-btn" onclick="toggleAll()">Все месяцы ▼</button>
+      </div>
+      <div class="twrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:center">Мес.</th>
+              <th>Осн. долг</th>
+              <th>Проценты</th>
+              <th>Платёж</th>
+              <th>Остаток</th>
+            </tr>
+          </thead>
+          <tbody id="t-body"></tbody>
+          <tfoot id="t-foot"></tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /results -->
+</div><!-- /pg-calc -->
+
+<!-- ══ COMPARE PAGE ══ -->
+<div id="pg-compare" class="page">
+  <div style="margin-bottom:20px">
+    <h2 style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px">Сравнение с конкурентами</h2>
+    <p style="font-size:13px;color:var(--slate2)">КредитПро — единственный калькулятор с полным набором инструментов для заёмщика</p>
+  </div>
+  <div class="comp-wrap">
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Функция</th>
+          <th class="comp-ours">КредитПро</th>
+          <th>Банки.ру</th>
+          <th>Сравни.ру</th>
+          <th>Calcus.ru</th>
+          <th>Excel</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="feat">Ручной ввод всех параметров</td><td class="comp-ours chk">✓</td><td class="chk">✓</td><td class="chk">✓</td><td class="chk">✓</td><td class="chk">✓</td></tr>
+        <tr><td class="feat">Аннуитет + дифф. одновременно</td><td class="comp-ours chk">✓</td><td class="crs">✗</td><td class="crs">✗</td><td class="cpt">~</td><td class="chk">✓</td></tr>
+        <tr><td class="feat">Мгновенное сравнение переплаты</td><td class="comp-ours chk">✓</td><td class="crs">✗</td><td class="crs">✗</td><td class="crs">✗</td><td class="cpt">~</td></tr>
+        <tr><td class="feat">Ежемесячное досрочное погашение</td><td class="comp-ours chk">✓</td><td class="cpt">~</td><td class="cpt">~</td><td class="crs">✗</td><td class="crs">✗</td></tr>
+        <tr><td class="feat">Единовременный досрочный платёж</td><td class="comp-ours chk">✓</td><td class="crs">✗</td><td class="crs">✗</td><td class="crs">✗</td><td class="crs">✗</td></tr>
+        <tr><td class="feat">4 интерактивных графика</td><td class="comp-ours chk">✓</td><td class="cpt">~</td><td class="crs">✗</td><td class="crs">✗</td><td class="crs">✗</td></tr>
+        <tr><td class="feat">Полная таблица по всем месяцам</td><td class="comp-ours chk">✓</td><td class="chk">✓</td><td class="cpt">~</td><td class="chk">✓</td><td class="chk">✓</td></tr>
+        <tr><td class="feat">Без рекламы</td><td class="comp-ours chk">✓</td><td class="crs">✗</td><td class="crs">✗</td><td class="cpt">~</td><td class="chk">✓</td></tr>
+        <tr><td class="feat">Работает без интернета</td><td class="comp-ours chk">✓</td><td class="crs">✗</td><td class="crs">✗</td><td class="crs">✗</td><td class="chk">✓</td></tr>
+        <tr><td class="feat">Адаптивный дизайн (мобильный)</td><td class="comp-ours chk">✓</td><td class="chk">✓</td><td class="chk">✓</td><td class="cpt">~</td><td class="crs">✗</td></tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td style="font-weight:800;color:var(--gold2);text-align:left;font-size:11px;letter-spacing:.5px">ИТОГО ИЗ 10</td>
+          <td style="font-size:16px;font-weight:900;color:var(--gold2)">10/10</td>
+          <td style="font-size:14px;font-weight:700;color:rgba(255,255,255,.6)">4/10</td>
+          <td style="font-size:14px;font-weight:700;color:rgba(255,255,255,.6)">3/10</td>
+          <td style="font-size:14px;font-weight:700;color:rgba(255,255,255,.6)">3/10</td>
+          <td style="font-size:14px;font-weight:700;color:rgba(255,255,255,.6)">5/10</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <p style="font-size:11px;color:var(--slate3);margin-top:8px">✓ — полностью реализовано &nbsp;|&nbsp; ~ — частично &nbsp;|&nbsp; ✗ — отсутствует</p>
+
+  <div class="comp-adv">
+    <div class="adv-card" style="border-top:3px solid var(--teal)">
+      <div class="adv-icon">🏆</div>
+      <div class="adv-title">Единственный двойной расчёт</div>
+      <div class="adv-body">Ни один публичный онлайн-калькулятор не показывает оба типа платежей рядом с мгновенным сравнением переплаты в рублях.</div>
+    </div>
+    <div class="adv-card" style="border-top:3px solid var(--gold)">
+      <div class="adv-icon">📊</div>
+      <div class="adv-title">4 графика вместо нуля</div>
+      <div class="adv-body">Сравни.ру и Calcus.ru не показывают ни одного графика. Банки.ру — один. КредитПро — четыре разных вида визуализации кредита.</div>
+    </div>
+    <div class="adv-card" style="border-top:3px solid #8b5cf6">
+      <div class="adv-icon">🚀</div>
+      <div class="adv-title">Полная досрочка</div>
+      <div class="adv-body">Видите точную экономию в рублях и сокращение срока. Единственный калькулятор, считающий единовременный досрочный платёж вместе с ежемесячным.</div>
+    </div>
+  </div>
+</div>
+
+
+</main>
+
+<script>
+// ── STATE ──────────────────────────────────────
+let annRows=[], diffRows=[], annTotal=0, diffTotal=0, annPay=0;
+let curTable='ann', showAll=false, earlyOpen=false;
+let charts={};
+
+// ── UTILS ──────────────────────────────────────
+const rub = n => Math.round(n).toLocaleString('ru-RU')+'\u00A0₽';
+const k   = n => {
+  const a=Math.abs(n);
+  if(a>=1e6) return (n/1e6).toFixed(1)+'\u00A0млн\u00A0₽';
+  if(a>=1e3) return Math.round(n/1e3)+'\u00A0тыс\u00A0₽';
+  return Math.round(n).toLocaleString('ru-RU')+'\u00A0₽';
+};
+const pct = n => n.toFixed(1)+'%';
+const set = (id,v) => document.getElementById(id).textContent=v;
+
+// ── MATH ───────────────────────────────────────
+function calcAnn(S,rAnn,n){
+  const r=rAnn/12/100;
+  const f=r===0?1:Math.pow(1+r,n);
+  const pay=r===0?S/n:S*(r*f)/(f-1);
+  let bal=S, rows=[], total=0;
+  for(let m=1;m<=n;m++){
+    const int=bal*r;
+    const isLast=m===n;
+    const prin=isLast?bal:pay-int;
+    const tot=isLast?bal+int:pay;
+    bal=isLast?0:Math.max(0,bal-prin);
+    total+=tot;
+    rows.push({m,int,prin,tot,bal});
+  }
+  return {rows,total,pay};
+}
+
+function calcDiff(S,rAnn,n){
+  const r=rAnn/12/100;
+  const fp=S/n;
+  let bal=S, rows=[], total=0;
+  for(let m=1;m<=n;m++){
+    const int=bal*r;
+    const prin=m===n?bal:fp;
+    const tot=prin+int;
+    bal=m===n?0:Math.max(0,bal-prin);
+    total+=tot;
+    rows.push({m,int,prin,tot,bal});
+  }
+  return {rows,total};
+}
+
+function calcEarlyFn(S,rAnn,n,extra,lump){
+  const r=rAnn/12/100;
+  const f=r===0?1:Math.pow(1+r,n);
+  const base=r===0?S/n:S*(r*f)/(f-1);
+  let bal=Math.max(0,S-lump), total=lump, months=0;
+  while(bal>0.01&&months<n*3){
+    months++;
+    const int=bal*r;
+    const prin=Math.min(base-int+extra,bal);
+    bal=Math.max(0,bal-prin);
+    total+=int+prin;
+    if(bal<0.01)break;
+  }
+  return {months,total};
+}
+
+// ── MAIN CALC ──────────────────────────────────
+function run(){
+  const av=document.getElementById('i-amount').value;
+  const rv=document.getElementById('i-rate').value;
+  const mv=document.getElementById('i-months').value;
+  const S=parseFloat(av), R=parseFloat(rv), N=parseInt(mv);
+  let ok=true;
+
+  function chk(id,eid,bad){
+    const el=document.getElementById(id);
+    const er=document.getElementById(eid);
+    if(bad){el.classList.add('err');er.style.display='block';ok=false;}
+    else{el.classList.remove('err');er.style.display='none';}
+  }
+  chk('i-amount','e-amount',!av||isNaN(S)||S<1000||S>1e8);
+  chk('i-rate',  'e-rate',  !rv||isNaN(R)||R<0.1||R>100);
+  chk('i-months','e-months',!mv||isNaN(N)||N<1||N>480);
+  if(!ok)return;
+
+  const ann=calcAnn(S,R,N);
+  const dif=calcDiff(S,R,N);
+  annRows=ann.rows; diffRows=dif.rows;
+  annTotal=ann.total; diffTotal=dif.total; annPay=ann.pay;
+
+  const sav=annTotal-diffTotal;
+  const ovA=annTotal-S, ovD=diffTotal-S;
+
+  // Banner
+  set('r-savings', rub(sav));
+  set('r-savings-sub', sav>0
+    ? `дифференцированный выгоднее · разница реальная, не маркетинговая`
+    : 'оба типа дают одинаковую переплату при данных параметрах');
+  set('r-bs-amount', k(S));
+  set('r-bs-rate',   R+'%');
+  set('r-bs-term',   N>=12?`${(N/12).toFixed(N%12===0?0:1)}\u00A0лет`:`${N}\u00A0мес`);
+
+  // Annuity card
+  set('r-ann-pay',   k(ann.pay));
+  set('r-ann-total', k(annTotal));
+  set('r-ann-over',  k(ovA));
+  set('r-ann-pct',   pct(ovA/S*100));
+
+  // Diff card
+  set('r-diff-first', k(dif.rows[0].tot));
+  set('r-diff-total', k(diffTotal));
+  set('r-diff-over',  k(ovD));
+  set('r-diff-last',  k(dif.rows[N-1].tot));
+  set('winner-badge', sav>0?'✓ ВЫГОДНЕЕ':'≈ ОДИНАКОВО');
+
+  buildCharts(N,S);
+  buildTable();
+  document.getElementById('results').style.display='block';
+  setTimeout(()=>document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'}),50);
+}
+
+// ── CHARTS ─────────────────────────────────────
+function smpStep(n){return n>120?Math.ceil(n/80):n>60?2:1}
+function smp(arr,s){return arr.filter((_,i)=>i%s===0||i===arr.length-1)}
+
+const tip={
+  backgroundColor:'#0f1f38',titleColor:'#fbbf24',bodyColor:'#fff',
+  padding:10,cornerRadius:8,displayColors:true,
+  callbacks:{label:ctx=>' '+Math.round(ctx.raw).toLocaleString('ru-RU')+' ₽'}
+};
+const axX={ticks:{color:'#94a3b8',font:{size:11},maxTicksLimit:10},grid:{display:false}};
+const axY={ticks:{color:'#94a3b8',font:{size:11},callback:v=>{
+  const a=Math.abs(v);
+  if(a>=1e6)return (v/1e6).toFixed(1)+'м';
+  if(a>=1e3)return Math.round(v/1e3)+'т';
+  return v;
+}},grid:{color:'#f1f5f9'}};
+
+function killChart(k){if(charts[k]){charts[k].destroy();delete charts[k];}}
+
+function buildCharts(N,S){
+  const st=smpStep(N);
+  const aS=smp(annRows,st), dS=smp(diffRows,st);
+  const lbl=aS.map(r=>r.m+'м');
+
+  killChart('p');killChart('s');killChart('b');killChart('c');
+
+  charts.p=new Chart(document.getElementById('ch-payments'),{
+    type:'line',
+    data:{labels:lbl,datasets:[
+      {label:'Аннуитет',data:aS.map(r=>Math.round(r.tot)),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.07)',borderWidth:2.5,pointRadius:0,tension:.35,fill:true},
+      {label:'Дифференцированный',data:dS.map(r=>Math.round(r.tot)),borderColor:'#0d9488',backgroundColor:'rgba(13,148,136,.07)',borderWidth:2.5,pointRadius:0,tension:.35,fill:true}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tip},scales:{x:axX,y:axY}}
+  });
+
+  charts.s=new Chart(document.getElementById('ch-structure'),{
+    type:'bar',
+    data:{labels:lbl,datasets:[
+      {label:'Проценты',data:aS.map(r=>Math.round(r.int)),backgroundColor:'rgba(239,68,68,.72)',borderRadius:2},
+      {label:'Основной долг',data:aS.map(r=>Math.round(r.prin)),backgroundColor:'rgba(16,185,129,.72)',borderRadius:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tip},scales:{x:{...axX,stacked:true},y:{...axY,stacked:true}}}
+  });
+
+  charts.b=new Chart(document.getElementById('ch-balance'),{
+    type:'line',
+    data:{labels:lbl,datasets:[
+      {label:'Аннуитет',data:aS.map(r=>Math.round(r.bal)),borderColor:'#2563eb',borderWidth:2.5,pointRadius:0,tension:.35},
+      {label:'Дифференцированный',data:dS.map(r=>Math.round(r.bal)),borderColor:'#0d9488',borderWidth:2.5,pointRadius:0,tension:.35,borderDash:[5,3]}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tip},scales:{x:axX,y:axY}}
+  });
+
+  let cA=0,cD=0; const caA=[],caD=[];
+  annRows.forEach((r,i)=>{
+    cA+=r.int; cD+=diffRows[i].int;
+    if(i%st===0||i===N-1){caA.push(Math.round(cA));caD.push(Math.round(cD));}
+  });
+  charts.c=new Chart(document.getElementById('ch-cumint'),{
+    type:'line',
+    data:{labels:lbl,datasets:[
+      {label:'Аннуитет',data:caA,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.09)',borderWidth:2.5,pointRadius:0,tension:.35,fill:true},
+      {label:'Дифференцированный',data:caD,borderColor:'#0d9488',backgroundColor:'rgba(13,148,136,.09)',borderWidth:2.5,pointRadius:0,tension:.35,fill:true}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tip},scales:{x:axX,y:axY}}
+  });
+}
+
+function swChart(name,btn){
+  document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.cpane').forEach(p=>p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('cp-'+name).classList.add('on');
+}
+
+// ── TABLE ──────────────────────────────────────
+function buildTable(){
+  const rows=curTable==='ann'?annRows:diffRows;
+  const tot=curTable==='ann'?annTotal:diffTotal;
+  const S=annRows.reduce((a,r)=>a+r.prin,0);
+  const lim=showAll?rows.length:Math.min(12,rows.length);
+  const tbody=document.getElementById('t-body');
+  const tfoot=document.getElementById('t-foot');
+  const sbtn=document.getElementById('sa-btn');
+
+  tbody.innerHTML=rows.slice(0,lim).map(r=>`
+    <tr>
+      <td>${r.m}</td>
+      <td class="td-p">${rub(r.prin)}</td>
+      <td class="td-i">${rub(r.int)}</td>
+      <td class="td-t">${rub(r.tot)}</td>
+      <td class="td-b">${rub(r.bal)}</td>
+    </tr>`).join('');
+
+  tfoot.innerHTML=`<tr>
+    <td style="color:var(--gold2);font-size:15px">∑</td>
+    <td style="color:#6ee7b7">${rub(S)}</td>
+    <td style="color:#fca5a5">${rub(tot-S)}</td>
+    <td style="color:var(--gold2);font-size:15px">${rub(tot)}</td>
+    <td style="color:rgba(255,255,255,.35)">0 ₽</td>
+  </tr>`;
+
+  if(rows.length>12){
+    sbtn.style.display='inline-block';
+    sbtn.textContent=showAll?'Свернуть ▲':`Все ${rows.length} месяцев ▼`;
+  } else {
+    sbtn.style.display='none';
+  }
+}
+
+function swTable(type,btn){
+  curTable=type; showAll=false;
+  document.querySelectorAll('.ttype-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  buildTable();
+}
+
+function toggleAll(){showAll=!showAll;buildTable();}
+
+// ── EARLY REPAYMENT ────────────────────────────
+function toggleEarly(){
+  earlyOpen=!earlyOpen;
+  document.getElementById('early-body').style.display=earlyOpen?'block':'none';
+  document.getElementById('e-arr').classList.toggle('open',earlyOpen);
+}
+
+function runEarly(){
+  if(!annRows.length)return;
+  const S=annRows.reduce((a,r)=>a+r.prin,0);
+  const N=annRows.length;
+  const extra=Math.max(0,parseFloat(document.getElementById('i-extra').value)||0);
+  const lump =Math.max(0,parseFloat(document.getElementById('i-lump').value)||0);
+  const rAnn =parseFloat(document.getElementById('i-rate').value)||0;
+  const wrap=document.getElementById('early-res');
+
+  if(extra===0&&lump===0){
+    wrap.innerHTML='<div class="e-placeholder">Введите сумму дополнительного или единовременного платежа выше ↑</div>';
+    return;
+  }
+  const r=calcEarlyFn(S,rAnn,N,extra,lump);
+  const saved=annTotal-r.total;
+  const ms=N-r.months;
+  const yr=Math.floor(ms/12), mo=ms%12;
+  const tStr=yr>0?(yr+'л.'+(mo>0?' '+mo+'м.':'')):(ms+'мес.');
+
+  wrap.innerHTML=`<div class="early-res">
+    <div class="ebox norm">
+      <div class="eb-v" style="color:var(--navy)">${r.months}<span style="font-size:12px;font-weight:600"> мес.</span></div>
+      <div class="eb-l" style="color:var(--slate3)">Новый срок</div>
+    </div>
+    <div class="ebox norm">
+      <div class="eb-v" style="color:var(--green)">${tStr}</div>
+      <div class="eb-l" style="color:var(--slate3)">Сокращение</div>
+    </div>
+    <div class="ebox norm">
+      <div class="eb-v" style="color:var(--navy)">${k(r.total)}</div>
+      <div class="eb-l" style="color:var(--slate3)">Итого заплатите</div>
+    </div>
+    <div class="ebox accent">
+      <div class="eb-v">${k(saved)}</div>
+      <div class="eb-l">Ваша экономия</div>
+    </div>
+  </div>`;
+}
+
+// ── PAGE SWITCH ────────────────────────────────
+function page(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.hdr-tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pg-'+name).classList.add('on');
+  btn.classList.add('on');
+}
+
+// ── ENTER KEY ─────────────────────────────────
+['i-amount','i-rate','i-months'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')run();});
+});
+</script>
+</body>
+</html>
