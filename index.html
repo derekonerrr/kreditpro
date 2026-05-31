@@ -176,7 +176,87 @@ tfoot td:first-child{text-align:center}
   .inputs-row{grid-template-columns:1fr}.calc-btn{grid-column:1}
   .hdr-badge{display:none}
 }
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{
+  width:34px;height:34px;border-radius:8px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+  color:#fff;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:.2s;flex-shrink:0;margin-left:8px;
+  line-height:1;padding:0;
+}
+.theme-toggle:hover{background:rgba(255,255,255,.16)}
+
+/* ── DARK THEME ── */
+html.dark{
+  --bg:#0d1827;
+  --bg2:#111f2e;
+  --border:#1e3050;
+  --white:#162030;
+  --teal3:rgba(13,148,136,.18);
+  --teal4:rgba(13,148,136,.09);
+  --gold3:rgba(245,158,11,.14);
+  --red2:rgba(239,68,68,.14);
+  --green2:rgba(16,185,129,.12);
+  --blue2:rgba(37,99,235,.14);
+  --slate:#7a92ab;
+  --slate2:#94a3b8;
+  --slate3:#4e6880;
+  --sh:0 1px 4px rgba(0,0,0,.5),0 1px 2px rgba(0,0,0,.3);
+  --sh-md:0 4px 14px rgba(0,0,0,.55);
+}
+html.dark body{color:#c8d8e8}
+
+/* inputs */
+html.dark .ifield{color:#d2e0ee;background:#111f2e}
+html.dark .ifield:hover{border-color:#2a4060}
+html.dark .ifield:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,.2)}
+html.dark .isuffix{color:#3d5878}
+html.dark .ihint{color:#3d5878}
+
+/* cards & stat boxes */
+html.dark .sbox .sv{color:#d2e0ee}
+html.dark .sbox .sv.red{color:var(--red)}
+html.dark .sbox .sv.green{color:var(--green)}
+html.dark .sbox .sv.blue{color:#4b8dff}
+
+/* early repayment */
+html.dark .e-title{color:#d2e0ee}
+html.dark .e-icon{background:rgba(245,158,11,.14)}
+html.dark .early-hdr:hover{background:rgba(255,255,255,.04)}
+html.dark .early-body{border-top-color:var(--border)}
+html.dark .e-placeholder{background:var(--bg2);border-color:var(--border)}
+
+/* table */
+html.dark thead th{background:var(--bg2);color:#3d5878}
+html.dark tbody tr:hover{background:rgba(255,255,255,.03)}
+html.dark .td-t{color:#d2e0ee}
+html.dark tfoot td[style*="rgba(255,255,255"]{color:rgba(255,255,255,.45)!important}
+
+/* chart panel */
+html.dark .ctab{border-color:var(--border);color:var(--slate2)}
+html.dark .ctab:hover{border-color:var(--teal);color:var(--teal)}
+
+/* compare page */
+html.dark .comp-table .feat{color:#c8d8e8}
+html.dark .comp-table th{background:var(--bg2);color:#3d5878;border-color:var(--border)}
+html.dark .comp-table td{border-color:var(--border)}
+html.dark .comp-ours{background:rgba(13,148,136,.15);color:var(--teal)}
+html.dark #pg-compare h2{color:#d2e0ee}
+html.dark #pg-compare p{color:var(--slate2)}
+html.dark .adv-title{color:#d2e0ee}
+html.dark .adv-body{color:var(--slate2)}
+
+/* misc */
+html.dark .panel-label{color:var(--slate3)}
+html.dark .ilabel{color:var(--slate)}
+html.dark .card-sub{color:var(--slate2)}
+html.dark .leg{color:var(--slate2)}
+html.dark .showall-btn{border-color:var(--teal);color:var(--teal)}
+html.dark .showall-btn:hover{background:var(--teal);color:#fff}
 </style>
+<script>try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
 </head>
 <body>
 
@@ -191,6 +271,7 @@ tfoot td:first-child{text-align:center}
       <button class="hdr-tab" onclick="page('compare',this)">Сравнение</button>
     </nav>
     <div class="hdr-badge">🏆 Двойной расчёт + досрочное погашение</div>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">🌙</button>
   </div>
 </header>
 
@@ -743,7 +824,34 @@ function page(name,btn){
   btn.classList.add('on');
 }
 
-// ── ENTER KEY ─────────────────────────────────
+// ── DARK THEME ─────────────────────────────────
+function toggleTheme(){
+  const html = document.documentElement;
+  const dark = html.classList.toggle('dark');
+  document.getElementById('theme-toggle').textContent = dark ? '☀️' : '🌙';
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+  if(Object.keys(charts).length) updateChartColors();
+}
+
+function updateChartColors(){
+  const dark = document.documentElement.classList.contains('dark');
+  const gridColor = dark ? 'rgba(255,255,255,.07)' : '#f1f5f9';
+  Object.values(charts).forEach(chart => {
+    if(!chart || !chart.options.scales) return;
+    const y = chart.options.scales.y;
+    if(y && y.grid) { y.grid.color = gridColor; chart.update('none'); }
+  });
+}
+
+// Apply icon on load
+(function(){
+  if(document.documentElement.classList.contains('dark')){
+    const btn = document.getElementById('theme-toggle');
+    if(btn) btn.textContent = '☀️';
+  }
+})();
+
+
 ['i-amount','i-rate','i-months'].forEach(id=>{
   document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')run();});
 });
